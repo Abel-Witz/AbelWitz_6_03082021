@@ -29,7 +29,7 @@ exports.signup = (req, res) => {
             const newUser = new User({email: req.body.email, password: hash});
 
             newUser.save()
-                .then((hash) => {
+                .then(() => {
                     res.status(200).json({message: "User created successfully !"});
                     return;
                 })
