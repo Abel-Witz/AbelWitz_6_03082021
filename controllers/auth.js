@@ -20,12 +20,12 @@ function isEmailValid(email) {
 exports.signup = (req, res) => {
     // Check for errors
     if ( !isEmailValid(req.body.email) ) {
-        res.status(400).json({message: "Email is invalid !"});
+        res.status(400).json({message: "Error: Email is invalid !"});
         return;
     }
 
     if (typeof req.body.password !== "string") {
-        res.status(400).json({message: "Password is invalid !"});
+        res.status(400).json({message: "Error: Password is invalid !"});
         return;
     }
 
@@ -43,17 +43,17 @@ exports.signup = (req, res) => {
                 .catch((err) => {
                      // Error: The email is already taken
                     if (err.errors && err.errors.email && err.errors.email.kind === "unique" ) {
-                        res.status(400).json({message: "Email is already used !"});
+                        res.status(400).json({message: "Error: Email is already used !"});
                         return;
                     }
 
                     console.error(err);
-                    res.status(500).json({message: "Internal server error"});
+                    res.status(500).json({message: err.toString()});
                 });
         })
         .catch((err) => {
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
         });
 }
 
@@ -62,12 +62,12 @@ exports.signup = (req, res) => {
 exports.login = (req, res) => {
     // Check for errors
     if ( !isEmailValid(req.body.email) ) {
-        res.status(400).json({message: "Email is invalid !"});
+        res.status(400).json({message: "Error: Email is invalid !"});
         return;
     }
 
     if (typeof req.body.password !== "string") {
-        res.status(400).json({message: "Password is invalid !"});
+        res.status(400).json({message: "Error: Password is invalid !"});
         return;
     }
 
@@ -84,25 +84,25 @@ exports.login = (req, res) => {
                             jwt.sign({userId: user._id}, process.env.JWT_SECRET, {expiresIn: "24h"}, function(err, encoded) {
                                 if (err) {
                                     console.error(err);
-                                    res.status(500).json({message: "Internal server error"});
+                                    res.status(500).json({message: err.toString()});
                                 } else {
                                     res.status(200).json({userId: user._id, token: encoded});
                                 }
                             })
                         } else {
-                            res.status(401).json({message: "The email isn't associated to any existing account or the password is incorrect"});
+                            res.status(401).json({message: "Error: The email isn't associated to any existing account or the password is incorrect"});
                         }
                     })
                     .catch((err) => {
                         console.error(err);
-                        res.status(500).json({message: "Internal server error"});
+                        res.status(500).json({message: err.toString()});
                     })
             } else {
-                res.status(401).json({message: "The email isn't associated to any existing account or the password is incorrect"});
+                res.status(401).json({message: "Error: The email isn't associated to any existing account or the password is incorrect"});
             }
         })
         .catch((err) => {
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
         });
 }

@@ -21,7 +21,7 @@ const upload = multer({
             cb(null, true);
         } else {
             const res = req.res;
-            res.status(400).json({message: "Only png, jpeg and jpg sauce images are allowed !"});
+            res.status(400).json({message: Error("Only png, jpeg and jpg sauce images are allowed !").toString()});
         }
     }
 });

@@ -9,21 +9,21 @@ const Sauce = require("../models/sauce");
 // Client input validation
 function isSauceJsonDataValid(sauceJson) {
     if (typeof sauceJson.name !== "string") {
-        return "Sauce data doesn't contain a name string !";
+        return "Error: Sauce data doesn't contain a name string !";
     }
     if (typeof sauceJson.manufacturer !== "string") {
-        return "Sauce data doesn't contain a manufacturer string !";
+        return "Error: Sauce data doesn't contain a manufacturer string !";
     }
     if (typeof sauceJson.description !== "string") {
-        return "Sauce data doesn't contain a description string !";
+        return "Error: Sauce data doesn't contain a description string !";
     }
     if (typeof sauceJson.mainPepper !== "string") {
-        return "Sauce data doesn't contain a mainPepper string !";
+        return "Error: Sauce data doesn't contain a mainPepper string !";
     }
     if (typeof sauceJson.heat !== "number") {
-        return "Sauce data doesn't contain a heat number!";
+        return "Error: Sauce data doesn't contain a heat number!";
     } else if (sauceJson.heat > 10 | sauceJson.heat < 1) {
-        return "The heat of the sauce must be between 0 and 10 !";
+        return "Error: The heat of the sauce must be between 0 and 10 !";
     }
 
     return true;
@@ -81,26 +81,26 @@ exports.postSauce = (req, res) => {
         if (err instanceof multer.MulterError) {
             // A Multer error occurred when uploading.
             if (err.code === "LIMIT_UNEXPECTED_FILE") {
-                res.status(400).json({message: `Unexpected file field: '${err.field}'`});
+                res.status(400).json({message: err.toString()});
             }
 
             return;
         } else if (err) {
             // An unknown error occurred when uploading.
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
             return;
         }
         
 
         // Check for errors
         if (!req.file) {
-            res.status(400).json({message: "Sauce image is missing !"});
+            res.status(400).json({message: "Error: Sauce image is missing !"});
             return;
         }
 
         if (typeof req.body.sauce !== "string") {
-            res.status(400).json({message: "Sauce data is missing !"});
+            res.status(400).json({message: "Error: Sauce data is missing !"});
             return
         }
 
@@ -110,7 +110,7 @@ exports.postSauce = (req, res) => {
         try {
             sauceJson = JSON.parse(req.body.sauce);
         } catch (error) {
-            res.status(400).json({message: "Sauce data format is incorrect, must be in stringified JSON !"});
+            res.status(400).json({message: error.toString()});
             return;
         }
 
@@ -147,7 +147,7 @@ exports.postSauce = (req, res) => {
             })
             .catch((err) => {
                 console.error(err);
-                res.status(500).json({message: "Internal server error"});
+                res.status(500).json({message: err.toString()});
             })
     })
 }
@@ -157,17 +157,17 @@ exports.postSauce = (req, res) => {
 exports.likeOrDislikeSauce = (req, res) => {
     // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
-        res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
+        res.status(400).json({message: "Error: Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
     if (req.body.userId !== req.userId) {
-        res.status(400).json({message: "The userId provided doesn't match with yours !"});
+        res.status(400).json({message: "Error: The userId provided doesn't match with yours !"});
         return;
     }
 
     if (!(req.body.like === 1 | req.body.like === 0 | req.body.like === -1)) {
-        res.status(400).json({message: "The like number value must be 1, 0 or -1 !"});
+        res.status(400).json({message: "Error: The like number value must be 1, 0 or -1 !"});
         return;
     }
 
@@ -176,7 +176,7 @@ exports.likeOrDislikeSauce = (req, res) => {
     Sauce.findOne({_id: req.params.id})
         .then((sauce) => {
             if (!sauce) {
-                res.status(400).json({message: "Sauce " + req.params.id + " doesn't exist"});
+                res.status(400).json({message: "Error: Sauce " + req.params.id + " doesn't exist"});
                 return;
             }
 
@@ -203,12 +203,12 @@ exports.likeOrDislikeSauce = (req, res) => {
                 })
                 .catch((err) => {
                     console.error(err);
-                    res.status(500).json({message: "Internal server error"});
+                    res.status(500).json({message: err.toString()});
                 })
         })
         .catch((err) => {
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
         });
 }
 
@@ -222,7 +222,7 @@ exports.getSauces = (req, res) => {
         })
         .catch((err) => {
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
         })
 }
 
@@ -231,7 +231,7 @@ exports.getSauces = (req, res) => {
 exports.getSauce = (req, res) => {
     // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
-        res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
+        res.status(400).json({message: "Error: Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
@@ -242,7 +242,7 @@ exports.getSauce = (req, res) => {
         })
         .catch((err) => {
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
         })
 }
 
@@ -251,7 +251,7 @@ exports.getSauce = (req, res) => {
 exports.updateSauce = (req, res) => {
     // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
-        res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
+        res.status(400).json({message: "Error: Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
@@ -261,14 +261,14 @@ exports.updateSauce = (req, res) => {
         if (err instanceof multer.MulterError) {
             // A Multer error occurred when uploading.
             if (err.code === "LIMIT_UNEXPECTED_FILE") {
-                res.status(400).json({message: `Unexpected file field: '${err.field}'`});
+                res.status(400).json({message: err.toString()});
             }
 
             return;
         } else if (err) {
             // An unknown error occurred when uploading.
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
             return;
         }
         
@@ -282,7 +282,7 @@ exports.updateSauce = (req, res) => {
                 try {
                     sauceJson = JSON.parse(req.body.sauce);
                 } catch (error) {
-                    res.status(400).json({message: "Sauce data format is incorrect, must be in stringified JSON !"});
+                    res.status(400).json({message: error.toString()});
                     return;
                 }
             } else {
@@ -293,7 +293,7 @@ exports.updateSauce = (req, res) => {
             sauceJson.imageUrl = getUrlFromImageFilename(imageFilename);
         } else {
             if (Object.keys(req.body).length === 0) {
-                res.status(400).json({message: "Sauce data is missing !"});
+                res.status(400).json({message: "Error: Sauce data is missing !"});
                 return;
             } else {
                 sauceJson = req.body;
@@ -323,7 +323,7 @@ exports.updateSauce = (req, res) => {
         Sauce.findOne({_id: req.params.id})
             .then((sauce) => {
                 if (!sauce) {
-                    res.status(400).json({message: "Sauce " + req.params.id + " doesn't exist"});
+                    res.status(400).json({message: "Error: Sauce " + req.params.id + " doesn't exist"});
                     return;
                 }
 
@@ -342,16 +342,16 @@ exports.updateSauce = (req, res) => {
                         })
                         .catch((err) => {
                             console.error(err);
-                            res.status(500).json({message: "Internal server error"});
+                            res.status(500).json({message: err.toString()});
                         })
                 } else {
-                    res.status(403).json({message: "Your userId doesn't match with the userId associated to the sauce"});
+                    res.status(403).json({message: "Error: Your userId doesn't match with the userId associated to the sauce"});
                     return;
                 }
             })
             .catch((err) => {
                 console.error(err);
-                res.status(500).json({message: "Internal server error"});
+                res.status(500).json({message: err.toString()});
             });
     })
 }
@@ -361,7 +361,7 @@ exports.updateSauce = (req, res) => {
 exports.deleteSauce = (req, res) => {
     // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
-        res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
+        res.status(400).json({message: "Error: Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
@@ -369,7 +369,7 @@ exports.deleteSauce = (req, res) => {
     Sauce.findOne({_id: req.params.id})
         .then((sauce) => {
             if (!sauce) {
-                res.status(400).json({message: "Sauce " + req.params.id + " doesn't exist"});
+                res.status(400).json({message: "Error: Sauce " + req.params.id + " doesn't exist"});
                 return;
             }
 
@@ -384,15 +384,15 @@ exports.deleteSauce = (req, res) => {
                     })
                     .catch((err) => {
                         console.error(err);
-                        res.status(500).json({message: "Internal server error"});
+                        res.status(500).json({message: err.toString()});
                     })
             } else {
-                res.status(403).json({message: "Your userId doesn't match with the userId associated to the sauce"});
+                res.status(403).json({message: "Error: Your userId doesn't match with the userId associated to the sauce"});
                 return;
             }
         })
         .catch((err) => {
             console.error(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({message: err.toString()});
         })
 }

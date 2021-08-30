@@ -9,7 +9,7 @@ module.exports = (req, res, next) => {
 
     jwt.verify(req.headers.authorization.split(" ")[1], process.env.JWT_SECRET, function(err, decoded) {
         if (err) {
-            res.status(401).json({message: "Incorrect authorization token"});
+            res.status(401).json({message: err.toString()});
             return;
         }
 
@@ -17,7 +17,7 @@ module.exports = (req, res, next) => {
             req.userId = decoded.userId;
             next();
         } else {
-            res.status(401).json({message: "Incorrect authorization token"});
+            res.status(401).json({message: Error("Incorrect authorization token").toString()});
         }
     })
 }
