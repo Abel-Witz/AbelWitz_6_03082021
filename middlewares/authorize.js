@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 
+// Attach a userId decoded from the JWT token sent by client
 module.exports = (req, res, next) => {
     if (typeof req.headers.authorization !== "string") {
         res.status(401).json({message: "Request doesn't contain authorization header"});

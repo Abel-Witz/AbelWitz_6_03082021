@@ -1,9 +1,12 @@
 const fs = require("fs");
+const uuid4 = require("uuid").v4;
 const mongoose = require("mongoose");
 const multer = require("multer");
 const multerUpload = require("../middlewares/multer");
 const Sauce = require("../models/sauce");
 
+
+// Client input validation
 function isSauceJsonDataValid(sauceJson) {
     if (typeof sauceJson.name !== "string") {
         return "Sauce data doesn't contain a name string !";
@@ -26,6 +29,8 @@ function isSauceJsonDataValid(sauceJson) {
     return true;
 }
 
+
+// Images uploading
 function getUrlFromImageFilename(filename) {
     return "http://" + app.get("host") + ":" + app.get("port") + "/image-uploads/" + filename;
 }
@@ -44,7 +49,34 @@ function removeImageFromFilename(filename) {
     }));
 }
 
+const MIME_TYPES = {
+    "image/jpg": "jpg",
+    "image/jpeg": "jpg",
+    "image/png": "png"
+}
+
+function generateImageFilename(multerFile) {
+    const fileExtension = MIME_TYPES[multerFile.mimetype];
+    return `${uuid4()}.${fileExtension}`;
+}
+
+function writeImageBufferIntoFile(file, fileName) {
+    const filePath = `./image-uploads/${fileName}`;
+
+    fs.writeFile(filePath, file.buffer, (err) => {
+        if (err) {
+            console.error(err);
+            return;
+        };
+
+        return filePath;
+    });
+};
+
+
+// Create a new sauce
 exports.postSauce = (req, res) => {
+    // Multer middleware
     multerUpload(req, res, function (err) {
         if (err instanceof multer.MulterError) {
             // A Multer error occurred when uploading.
@@ -60,7 +92,8 @@ exports.postSauce = (req, res) => {
             return;
         }
         
-        // Everything went fine.
+
+        // Check for errors
         if (!req.file) {
             res.status(400).json({message: "Sauce image is missing !"});
             return;
@@ -71,6 +104,8 @@ exports.postSauce = (req, res) => {
             return
         }
 
+
+        // Store the json sent by client
         let sauceJson;
         try {
             sauceJson = JSON.parse(req.body.sauce);
@@ -79,6 +114,8 @@ exports.postSauce = (req, res) => {
             return;
         }
 
+
+        // Check for errors
         const isValid = isSauceJsonDataValid(sauceJson);
 
         if (isValid !== true) {
@@ -86,18 +123,26 @@ exports.postSauce = (req, res) => {
             return
         }
 
+
         // Add data to the sauce
+        const imageFilename = generateImageFilename(req.file);
+
         sauceJson.userId = req.userId;
-        sauceJson.imageUrl = getUrlFromImageFilename(req.file.filename);
+        sauceJson.imageUrl = getUrlFromImageFilename(imageFilename);
         sauceJson.likes = 0;
         sauceJson.dislikes = 0;
         sauceJson.usersLiked = [];
         sauceJson.usersDisliked = [];
         delete sauceJson.__v;
 
+
+        // Save sauce id db
         const sauce = new Sauce(sauceJson);
         sauce.save()
             .then(() => {
+                // Save the image to disk from the buffer
+                writeImageBufferIntoFile(req.file, imageFilename);
+
                 res.status(200).json({message: "Sauce successfully created !"});
             })
             .catch((err) => {
@@ -107,7 +152,10 @@ exports.postSauce = (req, res) => {
     })
 }
 
+
+// Like/dislkine a sauce
 exports.likeOrDislikeSauce = (req, res) => {
+    // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
         res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
@@ -123,6 +171,8 @@ exports.likeOrDislikeSauce = (req, res) => {
         return;
     }
 
+
+    // Check that the sauce exists in db
     Sauce.findOne({_id: req.params.id})
         .then((sauce) => {
             if (!sauce) {
@@ -130,6 +180,7 @@ exports.likeOrDislikeSauce = (req, res) => {
                 return;
             }
 
+            // Update the usersLiked and usersDisliked arrays
             const likeIndex = sauce.usersLiked.findIndex((element) => element === req.userId);
             if (likeIndex !== -1) { sauce.usersLiked.splice(likeIndex, 1); }
             const dislikeIndex = sauce.usersDisliked.findIndex((element) => element === req.userId);
@@ -141,9 +192,11 @@ exports.likeOrDislikeSauce = (req, res) => {
                 sauce.usersDisliked.push(req.userId);
             }
 
+            // Update the calculated likes and dislikes values
             sauce.likes = sauce.usersLiked.length;
             sauce.dislikes = sauce.usersDisliked.length;
 
+            // Update the sauce in db
             sauce.save()
                 .then(() => {
                     res.status(200).json({message: "Success !"});
@@ -159,7 +212,10 @@ exports.likeOrDislikeSauce = (req, res) => {
         });
 }
 
+
+// Get all the sauces
 exports.getSauces = (req, res) => {
+    // Get the sauces in db
     Sauce.find()
         .then((sauces) => {
             res.status(200).json(sauces);
@@ -170,12 +226,16 @@ exports.getSauces = (req, res) => {
         })
 }
 
+
+// Get a sauce
 exports.getSauce = (req, res) => {
+    // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
         res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
+    // Find the sauce in db
     Sauce.findOne({_id: req.params.id})
         .then((sauce) => {
             res.status(200).json(sauce);
@@ -186,12 +246,17 @@ exports.getSauce = (req, res) => {
         })
 }
 
+
+// Update a sauce
 exports.updateSauce = (req, res) => {
+    // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
         res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
+
+    // Multer middleware
     multerUpload(req, res, function (err) {
         if (err instanceof multer.MulterError) {
             // A Multer error occurred when uploading.
@@ -207,7 +272,10 @@ exports.updateSauce = (req, res) => {
             return;
         }
         
-        // Everything went fine.
+
+        // Store the json and the filename of the image sent by client
+        let imageFilename;
+
         let sauceJson;
         if (req.file) {
             if (typeof req.body.sauce === "string") {
@@ -221,7 +289,8 @@ exports.updateSauce = (req, res) => {
                 sauceJson = {};
             }
 
-            sauceJson.imageUrl = getUrlFromImageFilename(req.file.filename);
+            imageFilename = generateImageFilename(req.file);
+            sauceJson.imageUrl = getUrlFromImageFilename(imageFilename);
         } else {
             if (Object.keys(req.body).length === 0) {
                 res.status(400).json({message: "Sauce data is missing !"});
@@ -231,6 +300,16 @@ exports.updateSauce = (req, res) => {
             }
         }
 
+
+        // Check for errors
+        const isValid = isSauceJsonDataValid(sauceJson);
+
+        if (isValid !== true) {
+            res.status(400).json({message: isValid});
+            return;
+        }
+
+
         // Strip away all the potential present malicious values in the sauce data sent by the client
         delete sauceJson.userId;
         delete sauceJson.likes;
@@ -239,6 +318,8 @@ exports.updateSauce = (req, res) => {
         delete sauceJson.usersDisliked;
         delete sauceJson.__v;
 
+
+        // Check that the sauce exists in db
         Sauce.findOne({_id: req.params.id})
             .then((sauce) => {
                 if (!sauce) {
@@ -246,10 +327,13 @@ exports.updateSauce = (req, res) => {
                     return;
                 }
 
+                // Update the sauce in db
                 if (sauce.userId === req.userId) {
-                    // Delete old image from storage if it was changed
                     if ( req.file ) {
+                        // Delete old image from storage if it was changed
                         removeImageFromFilename(getImageFilenameFromUrl(sauce.imageUrl));
+                        // Save the image to disk from the buffer
+                        writeImageBufferIntoFile(req.file, imageFilename);
                     }
 
                     Sauce.updateOne({_id: req.params.id}, sauceJson)
@@ -272,12 +356,16 @@ exports.updateSauce = (req, res) => {
     })
 }
 
+
+// Delete a specific sauce
 exports.deleteSauce = (req, res) => {
+    // Check for errors
     if (!mongoose.isValidObjectId(req.params.id)) {
         res.status(400).json({message: "Sauce id must be a single String of 12 bytes or a string of 24 hex characters"});
         return;
     }
 
+    // Check that the sauce exists in db
     Sauce.findOne({_id: req.params.id})
         .then((sauce) => {
             if (!sauce) {
@@ -285,9 +373,11 @@ exports.deleteSauce = (req, res) => {
                 return;
             }
 
+            // If the client is the author of the sauce we delete it
             if (sauce.userId === req.userId) {
                 sauce.remove()
                     .then((returnedSauce) => {
+                        // Remove the image attached to the sauce
                         removeImageFromFilename(getImageFilenameFromUrl(returnedSauce.imageUrl));
 
                         res.status(200).json({message: "Sauce successfully deleted !"});
